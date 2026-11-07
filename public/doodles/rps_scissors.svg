@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Scissors Peace / Cut Doodle -->
+    <path d="M 42 98 L 42 72 L 52 26 C 54 18 64 22 62 30 L 56 62 L 74 34 C 78 28 88 34 84 42 L 68 70 L 82 72 C 88 72 88 84 80 84 L 74 84 C 76 96 66 102 52 100 Z" fill="none" stroke="#2a2d34" stroke-width="3" />
+    
+  </g>
+</svg>

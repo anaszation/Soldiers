@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Open Hand Doodle -->
+    <path d="M 36 98 L 36 68 L 30 62 C 24 56 34 46 40 52 L 48 58 L 48 30 C 48 22 58 22 58 30 L 58 54 L 62 26 C 62 18 72 18 72 26 L 72 54 L 76 34 C 76 26 86 26 86 34 L 86 62 L 90 48 C 90 40 98 42 98 48 L 94 76 C 90 94 78 102 60 102 Z" fill="none" stroke="#2a2d34" stroke-width="3" />
+    
+  </g>
+</svg>

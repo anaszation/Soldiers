@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Mortar Operator Crouched -->
+    <circle cx="35" cy="54" r="8" fill="none" stroke="#ba1825" stroke-width="3" />
+    <polyline points="35,62 42,78 30,96" fill="none" stroke="#ba1825" stroke-width="3" />
+    <polyline points="42,78 52,94" fill="none" stroke="#ba1825" stroke-width="3" />
+    <!-- Hands dropping shell in tube -->
+    <polyline points="38,68 56,58 64,48" fill="none" stroke="#ba1825" stroke-width="3" />
+    <ellipse cx="66" cy="44" rx="3" ry="5" fill="#ba1825" /> <!-- Mortar shell -->
+    <!-- Mortar Tube angled at 60 degrees -->
+    <line x1="58" y1="94" x2="82" y2="52" stroke="#ba1825" stroke-width="5" />
+    <!-- Baseplate -->
+    <line x1="48" y1="96" x2="68" y2="96" stroke="#ba1825" stroke-width="4" />
+    <!-- Bipod Stand -->
+    <line x1="70" y1="73" x2="84" y2="94" stroke="#ba1825" stroke-width="2.5" />
+    
+  </g>
+</svg>

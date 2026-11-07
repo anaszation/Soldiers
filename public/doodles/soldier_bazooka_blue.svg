@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Head & Helmet -->
+    <circle cx="50" cy="38" r="9" fill="none" stroke="#1138a6" stroke-width="3" />
+    <path d="M 40 34 C 40 22, 60 22, 60 34 Z" fill="none" stroke="#1138a6" stroke-width="3" />
+    <!-- Body crouching -->
+    <polyline points="50,47 52,75 42,102" fill="none" stroke="#1138a6" stroke-width="3" />
+    <polyline points="52,75 68,90 68,104" fill="none" stroke="#1138a6" stroke-width="3" />
+    <!-- Bazooka Tube -->
+    <rect x="22" y="42" width="86" height="11" rx="2" fill="none" stroke="#1138a6" stroke-width="3" />
+    <line x1="108" y1="40" x2="114" y2="47" stroke="#1138a6" stroke-width="2.5" />
+    <line x1="114" y1="47" x2="108" y2="55" stroke="#1138a6" stroke-width="2.5" />
+    <line x1="22" y1="39" x2="16" y2="47" stroke="#1138a6" stroke-width="2.5" />
+    <line x1="16" y1="47" x2="22" y2="56" stroke="#1138a6" stroke-width="2.5" />
+    <!-- Arms holding tube -->
+    <polyline points="50,56 62,64 74,53" fill="none" stroke="#1138a6" stroke-width="3" />
+    
+  </g>
+</svg>

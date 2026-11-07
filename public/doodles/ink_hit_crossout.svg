@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Aggressive Kill Crossout Scribble -->
+    <line x1="22" y1="24" x2="106" y2="104" stroke="#d01824" stroke-width="6" />
+    <line x1="26" y1="20" x2="102" y2="108" stroke="#a0101a" stroke-width="3.5" />
+    <line x1="104" y1="24" x2="24" y2="104" stroke="#d01824" stroke-width="6" />
+    <line x1="108" y1="20" x2="20" y2="108" stroke="#a0101a" stroke-width="3.5" />
+    <!-- Ink droplets & splatter dots -->
+    <circle cx="64" cy="64" r="5" fill="#ba1825" />
+    <circle cx="52" cy="50" r="3" fill="#ba1825" />
+    <circle cx="78" cy="74" r="3.5" fill="#ba1825" />
+    <circle cx="36" cy="38" r="2.5" fill="#ba1825" />
+    <circle cx="92" cy="90" r="2.8" fill="#ba1825" />
+    <circle cx="95" cy="35" r="2.2" fill="#ba1825" />
+    <circle cx="32" cy="88" r="2" fill="#ba1825" />
+    <!-- Scribble loop -->
+    <path d="M 40 64 Q 64 45 88 64 Q 64 85 40 64" fill="none" stroke="#ba1825" stroke-width="2.5" />
+    
+  </g>
+</svg>

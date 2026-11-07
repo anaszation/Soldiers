@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Transferred Ink Blot / Smudge -->
+    <ellipse cx="64" cy="64" rx="9" ry="8" fill="#1840a0" opacity="0.85" />
+    <circle cx="64" cy="64" r="4.5" fill="#082060" />
+    <ellipse cx="68" cy="62" rx="14" ry="4" fill="#2050b0" opacity="0.3" transform="rotate(25 68 62)" />
+    <!-- Micro fiber bleed hairs -->
+    <line x1="64" y1="55" x2="63" y2="50" stroke="#1840a0" stroke-width="1.2" opacity="0.6" />
+    <line x1="72" y1="64" x2="78" y2="65" stroke="#1840a0" stroke-width="1.2" opacity="0.6" />
+    <line x1="64" y1="73" x2="65" y2="79" stroke="#1840a0" stroke-width="1.2" opacity="0.6" />
+    <line x1="55" y1="64" x2="50" y2="63" stroke="#1840a0" stroke-width="1.2" opacity="0.6" />
+    
+  </g>
+</svg>

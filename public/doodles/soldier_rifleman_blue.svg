@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Helmet -->
+    <path d="M 50 32 C 45 20, 75 20, 70 32 Z" fill="none" stroke="#1138a6" stroke-width="3" />
+    <!-- Head -->
+    <circle cx="60" cy="35" r="9" fill="none" stroke="#1138a6" stroke-width="3" />
+    <circle cx="63" cy="34" r="1.5" fill="#1138a6" />
+    <!-- Body -->
+    <line x1="60" y1="44" x2="60" y2="78" stroke="#1138a6" stroke-width="3" />
+    <!-- Legs -->
+    <polyline points="60,78 48,105 42,107" fill="none" stroke="#1138a6" stroke-width="3" />
+    <polyline points="60,78 72,105 78,107" fill="none" stroke="#1138a6" stroke-width="3" />
+    <!-- Arms holding rifle -->
+    <polyline points="60,54 48,65 72,62" fill="none" stroke="#1138a6" stroke-width="3" />
+    <!-- Rifle & Bayonet -->
+    <line x1="38" y1="67" x2="98" y2="58" stroke="#1138a6" stroke-width="3.5" />
+    <line x1="98" y1="58" x2="108" y2="56" stroke="#1138a6" stroke-width="2" /> <!-- Bayonet -->
+    <line x1="52" y1="65" x2="48" y2="74" stroke="#1138a6" stroke-width="2.5" /> <!-- Rifle stock -->
+    
+  </g>
+</svg>

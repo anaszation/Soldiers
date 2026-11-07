@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Radio Squad with headset -->
+    <circle cx="56" cy="36" r="8" fill="none" stroke="#ba1825" stroke-width="3" />
+    <!-- Headset arc and earcups -->
+    <path d="M 48 36 C 48 24, 64 24, 64 36" stroke="#ba1825" stroke-width="2.5" fill="none" />
+    <circle cx="48" cy="36" r="2.5" fill="#ba1825" />
+    <circle cx="64" cy="36" r="2.5" fill="#ba1825" />
+    <!-- Body -->
+    <line x1="56" y1="44" x2="56" y2="76" stroke="#ba1825" stroke-width="3" />
+    <polyline points="56,76 46,104" fill="none" stroke="#ba1825" stroke-width="3" />
+    <polyline points="56,76 66,104" fill="none" stroke="#ba1825" stroke-width="3" />
+    <!-- Massive Field Radio on Back -->
+    <rect x="62" y="44" width="22" height="28" rx="2" fill="none" stroke="#ba1825" stroke-width="3" />
+    <line x1="74" y1="44" x2="78" y2="16" stroke="#ba1825" stroke-width="2.5" /> <!-- Antenna -->
+    <!-- Hand holding phone handset to ear -->
+    <polyline points="56,52 46,58 48,40" fill="none" stroke="#ba1825" stroke-width="3" />
+    
+  </g>
+</svg>

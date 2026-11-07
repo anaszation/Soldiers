@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="rough-ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g filter="url(#rough-ink)" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Commander with Peaked Cap & Megaphone / Sword -->
+    <circle cx="60" cy="38" r="8" fill="none" stroke="#ba1825" stroke-width="3" />
+    <!-- Peaked Officer Cap -->
+    <path d="M 50 32 L 72 32 L 76 26 L 46 26 Z" fill="none" stroke="#ba1825" stroke-width="3" />
+    <line x1="46" y1="32" x2="42" y2="35" stroke="#ba1825" stroke-width="2.5" />
+    <!-- Torso -->
+    <line x1="60" y1="46" x2="60" y2="78" stroke="#ba1825" stroke-width="3" />
+    <polygon points="56,52 64,52 60,60" fill="none" stroke="#ba1825" stroke-width="2" /> <!-- Tie/medal -->
+    <!-- Legs -->
+    <polyline points="60,78 48,106 44,107" fill="none" stroke="#ba1825" stroke-width="3" />
+    <polyline points="60,78 72,106 76,107" fill="none" stroke="#ba1825" stroke-width="3" />
+    <!-- Raised Arm with Sabre / Sword -->
+    <polyline points="60,54 80,48 95,30" fill="none" stroke="#ba1825" stroke-width="3" />
+    <line x1="90" y1="34" x2="98" y2="28" stroke="#ba1825" stroke-width="2.5" /> <!-- Crossguard -->
+    <!-- Other Arm with Binoculars -->
+    <polyline points="60,54 48,58 54,42" fill="none" stroke="#ba1825" stroke-width="3" />
+    
+  </g>
+</svg>
