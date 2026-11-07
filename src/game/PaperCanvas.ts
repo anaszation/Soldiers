@@ -100,13 +100,13 @@ export class PaperCanvas {
     const h = this.HEIGHT;
     const creaseX = this.CREASE_X;
 
-    // 1. Paper Base (Tactile Cream Tint)
-    ctx.fillStyle = '#fbf9f4';
+    // 1. Paper Base (Tactile Warm Notebook Tint)
+    ctx.fillStyle = '#f7f4ed';
     ctx.fillRect(0, 0, w, h);
 
     // 2. Notebook Quad Grid (5mm Graph Paper, 20px step)
-    ctx.strokeStyle = '#d9e5f0';
-    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = '#c2d5e8';
+    ctx.lineWidth = 1.0;
     ctx.beginPath();
     for (let x = 20; x < w; x += 20) {
       ctx.moveTo(x, 0);
@@ -119,9 +119,9 @@ export class PaperCanvas {
     ctx.stroke();
 
     // 3. Margin Lines (Traditional French Notebook Red Margins)
-    ctx.strokeStyle = '#e74c3c';
-    ctx.lineWidth = 1.2;
-    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.7;
     ctx.beginPath();
     ctx.moveTo(50, 0);
     ctx.lineTo(50, h);
@@ -131,8 +131,8 @@ export class PaperCanvas {
     ctx.globalAlpha = 1.0;
 
     // 4. Center Fold Crease Line (Dashed)
-    ctx.strokeStyle = '#c0392b';
-    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = '#962d22';
+    ctx.lineWidth = 2.4;
     ctx.setLineDash([8, 6]);
     ctx.beginPath();
     ctx.moveTo(creaseX, 0);
@@ -142,15 +142,15 @@ export class PaperCanvas {
 
     // 5. Header Handwritten Labels
     ctx.font = '700 16px "Space Mono", monospace';
-    ctx.fillStyle = '#103ba6';
+    ctx.fillStyle = '#0a329e';
     ctx.textAlign = 'center';
     ctx.fillText('PLAYER 1 [BLUE FIELD]', creaseX / 2, 34);
 
-    ctx.fillStyle = '#ba1424';
+    ctx.fillStyle = '#ba1222';
     ctx.fillText('PLAYER 2 [RED FIELD]', creaseX + creaseX / 2, 34);
 
     ctx.font = '11px "Space Mono", monospace';
-    ctx.fillStyle = '#8a7e72';
+    ctx.fillStyle = '#6e6256';
     ctx.fillText('--- CENTER CREASE (FOLD AXIS) ---', creaseX, h - 20);
 
     // 6. Render Soldiers (With Fog-of-War)
@@ -164,17 +164,17 @@ export class PaperCanvas {
 
       if (!isVisible) return;
 
-      const size = 52;
+      const size = 62;
       const drawX = s.x - size / 2;
       const drawY = s.y - size / 2;
 
-      // Subtle base doodle circle
+      // Base doodle circle
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-      ctx.fillStyle = s.player === 'blue' ? 'rgba(16, 59, 166, 0.08)' : 'rgba(186, 20, 36, 0.08)';
+      ctx.fillStyle = s.player === 'blue' ? 'rgba(10, 50, 158, 0.12)' : 'rgba(186, 18, 34, 0.12)';
       ctx.fill();
-      ctx.strokeStyle = s.player === 'blue' ? 'rgba(16, 59, 166, 0.4)' : 'rgba(186, 20, 36, 0.4)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = s.player === 'blue' ? '#0a329e' : '#ba1222';
+      ctx.lineWidth = 1.8;
       ctx.stroke();
 
       // Soldier Sprite
@@ -186,7 +186,7 @@ export class PaperCanvas {
 
       // If dead, draw aggressive kill crossout over the soldier
       if (!s.alive && this.hitCrossoutImg && this.hitCrossoutImg.complete) {
-        ctx.drawImage(this.hitCrossoutImg, drawX - 6, drawY - 6, size + 12, size + 12);
+        ctx.drawImage(this.hitCrossoutImg, drawX - 8, drawY - 8, size + 16, size + 16);
       }
     });
 

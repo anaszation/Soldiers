@@ -43,7 +43,7 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.0;
     container.appendChild(this.renderer.domElement);
 
     // Setup Lighting
@@ -61,16 +61,16 @@ export class SceneManager {
   }
 
   private setupLighting() {
-    // Ambient fill light (warm classroom morning)
-    const ambientLight = new THREE.AmbientLight(0xfff1dc, 0.7);
+    // Warm ambient fill so everything on the notebook is evenly legible
+    const ambientLight = new THREE.AmbientLight(0xfff7ee, 1.3);
     this.scene.add(ambientLight);
 
-    // Desk Lamp Spotlight (Warm directional beam from top-right)
-    const lampLight = new THREE.SpotLight(0xffecd0, 4.5);
-    lampLight.position.set(0.18, 0.10, 0.28);
+    // Desk Lamp Soft Spotlight: positioned near the physical 3D lamp in the scene
+    const lampLight = new THREE.SpotLight(0xffecd0, 1.4);
+    lampLight.position.set(0.35, 0.25, 0.30);
     lampLight.target.position.set(0, 0, 0);
-    lampLight.angle = Math.PI / 4;
-    lampLight.penumbra = 0.45;
+    lampLight.angle = Math.PI / 3;
+    lampLight.penumbra = 0.75;
     lampLight.castShadow = true;
     lampLight.shadow.mapSize.width = 2048;
     lampLight.shadow.mapSize.height = 2048;
@@ -78,16 +78,19 @@ export class SceneManager {
     this.scene.add(lampLight);
     this.scene.add(lampLight.target);
 
-    // Subtle blue fill from window side
-    const windowFill = new THREE.DirectionalLight(0xd6e5ff, 0.4);
+    // Window daylight fill
+    const windowFill = new THREE.DirectionalLight(0xe8f0ff, 0.6);
     windowFill.position.set(-0.35, -0.25, 0.3);
     this.scene.add(windowFill);
   }
 
   private loadModels() {
-    // 1. Desk Scene Model
+    // 1. Desk Scene Model (Rotated 90 deg so desk surface lies flat under paper)
     this.loader.load('/models/desk_scene.glb', (gltf) => {
       this.deskSceneMesh = gltf.scene;
+      // Align Blender Z-up coordinate system with Three.js camera
+      this.deskSceneMesh.rotation.x = Math.PI / 2;
+      this.deskSceneMesh.position.set(0, 0, -0.005);
       this.deskSceneMesh.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           child.castShadow = true;
@@ -199,15 +202,16 @@ export class SceneManager {
 
       this.activePenMesh.position.lerp(targetPos, deltaTime * 14.0);
 
-      // Natural 45-degree handwriting tilt
+      // Natural handwriting tilt: leans back toward user and slightly right
+      const targetRotX = this.isPenWriting ? Math.PI / 3.4 : Math.PI / 4.0;
       this.activePenMesh.rotation.x = THREE.MathUtils.lerp(
         this.activePenMesh.rotation.x,
-        this.isPenWriting ? Math.PI / 3.8 : Math.PI / 4.5,
+        targetRotX,
         deltaTime * 10
       );
-      this.activePenMesh.rotation.y = THREE.MathUtils.lerp(
-        this.activePenMesh.rotation.y,
-        0.18,
+      this.activePenMesh.rotation.z = THREE.MathUtils.lerp(
+        this.activePenMesh.rotation.z,
+        -Math.PI / 14,
         deltaTime * 10
       );
     }
