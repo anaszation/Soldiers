@@ -8,8 +8,8 @@ export class PaperFoldEngine {
 
   public readonly WIDTH = 0.297;  // A4 proportion in meters (297mm)
   public readonly HEIGHT = 0.210; // 210mm
-  public readonly SEGMENTS_X = 54;
-  public readonly SEGMENTS_Y = 36;
+  public readonly SEGMENTS_X = 64; // High density for smooth organic paper flex
+  public readonly SEGMENTS_Y = 48;
 
   // Animation state
   public isFolding: boolean = false;
@@ -28,12 +28,11 @@ export class PaperFoldEngine {
       this.SEGMENTS_Y
     );
 
-    // Save initial flat vertex positions for deformation reference
     this.originalPositions = new Float32Array(this.geometry.attributes.position.array);
 
     const material = new THREE.MeshStandardMaterial({
       map: paperTexture,
-      roughness: 0.85,
+      roughness: 0.88,
       metalness: 0.0,
       side: THREE.DoubleSide,
       shadowSide: THREE.DoubleSide,
@@ -42,15 +41,9 @@ export class PaperFoldEngine {
     this.mesh = new THREE.Mesh(this.geometry, material);
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    this.mesh.position.set(0, 0, 0.002); // 2mm above wooden desk surface
+    this.mesh.position.set(0, 0, 0.002);
   }
 
-  /**
-   * Start 3D Paper Fold Animation
-   * @param player Which player is folding their half over
-   * @param onContact Called when paper reaches 180 contact with table
-   * @param onComplete Called when paper unfolds back to flat
-   */
   public triggerFold(
     player: PlayerColor,
     onContact: () => void,
@@ -61,20 +54,17 @@ export class PaperFoldEngine {
     this.foldingPlayer = player;
     this.isFolding = true;
     this.foldProgress = 0;
-    this.foldDirection = 1; // Fold in
+    this.foldDirection = 1;
     this.contactTriggered = false;
     this.onContactCallback = onContact;
     this.onCompleteCallback = onComplete;
   }
 
-  /**
-   * Update paper vertex curl deformation in the render loop
-   */
   public update(deltaSeconds: number) {
     if (!this.isFolding) return;
 
-    // Fold speed: ~0.8s fold in, pause at contact, ~0.6s unfold
-    const foldSpeed = 1.35;
+    // Organic speed: ease into the fold, crisp press, smooth unfold
+    const foldSpeed = 1.25;
     this.foldProgress += this.foldDirection * foldSpeed * deltaSeconds;
 
     // Contact threshold at peak fold (t = 1.0)
@@ -84,7 +74,6 @@ export class PaperFoldEngine {
         this.contactTriggered = true;
         if (this.onContactCallback) this.onContactCallback();
       }
-      // Start unfolding back after brief contact press
       this.foldDirection = -1;
     }
 
@@ -97,22 +86,27 @@ export class PaperFoldEngine {
       return;
     }
 
-    // Apply vertex deformation
-    this.applyFoldDeformation(this.foldProgress, this.foldingPlayer);
+    // Apply organic non-linear paper curl deformation
+    this.applyOrganicPaperFold(this.foldProgress, this.foldingPlayer);
   }
 
-  private applyFoldDeformation(progress: number, player: PlayerColor) {
+  /**
+   * Organic 3D Non-linear Paper Curl Deformation
+   * Simulates real paper flexibility: arching curvature, rolling bend, and corner flex
+   */
+  private applyOrganicPaperFold(progress: number, player: PlayerColor) {
     const pos = this.geometry.attributes.position;
     const orig = this.originalPositions;
     const vertexCount = pos.count;
 
-    // Smooth ease-in-out curve for natural physical paper hinge
-    const ease = 0.5 - 0.5 * Math.cos(progress * Math.PI);
-    const angle = ease * Math.PI; // 0 to 180 degrees (PI radians)
+    // Smooth sinusoidal ease
+    const p = Math.max(0, Math.min(1, progress));
+    const ease = 0.5 - 0.5 * Math.cos(p * Math.PI);
+    const angle = ease * Math.PI;
 
     const isBlue = player === 'blue';
-    // Blue folds from left (x < 0) to right (x > 0)
-    // Red folds from right (x > 0) to left (x < 0)
+    const halfWidth = this.WIDTH / 2;
+    const halfHeight = this.HEIGHT / 2;
 
     for (let i = 0; i < vertexCount; i++) {
       const idx = i * 3;
@@ -124,24 +118,38 @@ export class PaperFoldEngine {
 
       if (isFoldingVertex) {
         const distFromCrease = Math.abs(origX);
-        const normDist = distFromCrease / (this.WIDTH / 2);
+        const u = distFromCrease / halfWidth; // 0 (crease) to 1 (outer edge)
+        const v = Math.abs(origY) / halfHeight; // 0 (center Y) to 1 (top/bottom corners)
 
-        // Natural curved bend (arch effect)
-        const archFactor = Math.sin(progress * Math.PI) * 0.045 * normDist;
+        // 1. Organic Arch Height: High flex loop in the middle of the sheet
+        const flexWave = Math.sin(p * Math.PI);
+        const archLoop = flexWave * (0.075 * Math.sin(u * Math.PI) + 0.035 * Math.sin(u * Math.PI * 0.5));
+
+        // 2. Corner curl: Corners roll slightly faster than the middle edge
+        const cornerRoll = flexWave * (v * v * 0.015);
+
+        // 3. Horizontal arc compression: Paper forms a continuous cylinder curve
+        const horizontalCurl = flexWave * Math.sin(u * Math.PI) * 0.032;
 
         if (isBlue) {
-          // Blue: x moves from -dist to +dist
-          pos.array[idx] = -distFromCrease * Math.cos(angle);
+          // Blue folds left to right
+          const targetX = -distFromCrease * Math.cos(angle) + horizontalCurl;
+          const targetZ = distFromCrease * Math.sin(angle) + archLoop + cornerRoll;
+
+          pos.array[idx] = targetX;
           pos.array[idx + 1] = origY;
-          pos.array[idx + 2] = distFromCrease * Math.sin(angle) + archFactor;
+          pos.array[idx + 2] = Math.max(0.001, targetZ);
         } else {
-          // Red: x moves from +dist to -dist
-          pos.array[idx] = distFromCrease * Math.cos(angle);
+          // Red folds right to left
+          const targetX = distFromCrease * Math.cos(angle) - horizontalCurl;
+          const targetZ = distFromCrease * Math.sin(angle) + archLoop + cornerRoll;
+
+          pos.array[idx] = targetX;
           pos.array[idx + 1] = origY;
-          pos.array[idx + 2] = distFromCrease * Math.sin(angle) + archFactor;
+          pos.array[idx + 2] = Math.max(0.001, targetZ);
         }
       } else {
-        // Static half remains flat on desk with subtle sympathetic vibration
+        // Subtle contact wave on the receiving half
         pos.array[idx] = origX;
         pos.array[idx + 1] = origY;
         pos.array[idx + 2] = origZ;

@@ -3,12 +3,13 @@ import { Soldier, SoldierType, PlayerColor, GamePhase, GameMode, RPSChoice, Stri
 import { PaperCanvas } from './PaperCanvas';
 import { SceneManager } from './SceneManager';
 import { soundManager } from '../audio/SoundManager';
-import { PeerConnection } from '../network/PeerConnection';
+import { PeerConnection, NetworkPacket } from '../network/PeerConnection';
 
 export class GameController {
   public phase: GamePhase = 'MENU';
   public mode: GameMode = 'LOCAL_1V1';
   public activePlayer: PlayerColor = 'blue';
+  public myOnlineRole: PlayerColor = 'blue';
 
   public soldiers: Soldier[] = [];
   public strikes: StrikeRecord[] = [];
@@ -17,6 +18,10 @@ export class GameController {
   public paperCanvas: PaperCanvas;
   public sceneManager: SceneManager;
   public network: PeerConnection = new PeerConnection();
+
+  // Deployment sync flags
+  private myDeploymentReady: boolean = false;
+  private opponentDeployed: boolean = false;
 
   // Statistics
   public turnCount: number = 0;
@@ -48,7 +53,8 @@ export class GameController {
       'blue-hand-img', 'red-hand-img',
       'victory-modal', 'winner-title', 'winner-desc', 'stat-turns', 'stat-accuracy', 'stat-hits', 'btn-play-again',
       'toast-message', 'blue-count', 'red-count',
-      'btn-camera', 'cam-label', 'btn-sound', 'sound-label', 'btn-help', 'rules-modal', 'btn-close-rules'
+      'btn-camera', 'cam-label', 'btn-sound', 'sound-label', 'btn-help', 'rules-modal', 'btn-close-rules',
+      'blue-score-box', 'red-score-box'
     ];
     ids.forEach(id => {
       this.elements[id] = document.getElementById(id);
@@ -59,21 +65,22 @@ export class GameController {
     // Mode Buttons
     this.elements['btn-mode-ai']?.addEventListener('click', () => this.startDeployment('VS_AI'));
     this.elements['btn-mode-local']?.addEventListener('click', () => this.startDeployment('LOCAL_1V1'));
-    this.elements['btn-mode-online']?.addEventListener('click', () => this.setupOnlineLobby());
+    this.elements['btn-mode-online']?.addEventListener('click', () => this.setupOnlineHost());
 
-    // Online Lobby Buttons
+    // Online Join Room
+    this.elements['btn-connect-peer']?.addEventListener('click', () => {
+      const input = this.elements['join-code-input'] as HTMLInputElement;
+      const targetId = input?.value.trim();
+      if (targetId) {
+        this.setupOnlineGuest(targetId);
+      }
+    });
+
     this.elements['btn-copy-room']?.addEventListener('click', () => {
       const input = this.elements['room-code-input'] as HTMLInputElement;
       if (input && input.value) {
         navigator.clipboard.writeText(input.value);
         this.showToast('Room Code Copied!', 'miss');
-      }
-    });
-
-    this.elements['btn-connect-peer']?.addEventListener('click', () => {
-      const input = this.elements['join-code-input'] as HTMLInputElement;
-      if (input && input.value.trim()) {
-        this.network.connectToPeer(input.value.trim());
       }
     });
 
@@ -86,7 +93,9 @@ export class GameController {
     this.elements['btn-curtain-continue']?.addEventListener('click', () => {
       this.elements['privacy-curtain']?.classList.add('hidden');
       this.activePlayer = 'red';
+      this.phase = 'DEPLOY_RED';
       this.sceneManager.setActivePen('red');
+      this.elements['soldier-shelf']?.classList.remove('hidden');
       this.renderShelf();
       this.updateHUD();
       this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
@@ -96,31 +105,26 @@ export class GameController {
     this.elements['blue-rps-buttons']?.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('.rps-btn') as HTMLElement;
       if (btn && btn.dataset.choice) {
-        this.handleRPSSelection('blue', btn.dataset.choice as RPSChoice);
+        this.onUserRPSSelect('blue', btn.dataset.choice as RPSChoice);
       }
     });
 
     this.elements['red-rps-buttons']?.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('.rps-btn') as HTMLElement;
       if (btn && btn.dataset.choice) {
-        this.handleRPSSelection('red', btn.dataset.choice as RPSChoice);
+        this.onUserRPSSelect('red', btn.dataset.choice as RPSChoice);
       }
     });
 
     // Play Again
     this.elements['btn-play-again']?.addEventListener('click', () => {
-      this.elements['victory-modal']?.classList.add('hidden');
-      this.elements['menu-modal']?.classList.remove('hidden');
-      this.phase = 'MENU';
-      this.soldiers = [];
-      this.strikes = [];
-      this.turnCount = 0;
-      this.totalHits = 0;
-      this.totalStrikes = 0;
-      this.paperCanvas.render(this.soldiers, this.strikes, this.phase, 'blue', null);
+      if (this.mode === 'ONLINE_P2P') {
+        this.network.send({ type: 'RESTART' });
+      }
+      this.resetToMenu();
     });
 
-    // Header Tool Buttons
+    // View & Sound Controls
     this.elements['btn-camera']?.addEventListener('click', () => {
       const isTactical = this.sceneManager.toggleCameraView();
       if (this.elements['cam-label']) {
@@ -143,73 +147,123 @@ export class GameController {
       this.elements['rules-modal']?.classList.add('hidden');
     });
 
-    // Three.js Canvas Interaction for Drawing & Aiming
+    // 3D Canvas Interaction for Hover and Clicking
     const dom = this.sceneManager.renderer.domElement;
     dom.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     dom.addEventListener('click', (e) => this.handlePaperClick(e));
   }
 
   // ============================================================================
-  // GAME LIFECYCLE
+  // MULTIPLAYER SETUP
   // ============================================================================
 
-  public startDeployment(mode: GameMode) {
+  private setupOnlineHost() {
+    this.mode = 'ONLINE_P2P';
+    this.myOnlineRole = 'blue';
+    this.elements['online-controls']?.classList.remove('hidden');
+    const input = this.elements['room-code-input'] as HTMLInputElement;
+
+    this.network.init(true).then((myId) => {
+      if (input) input.value = myId;
+      this.showToast('Share room code with your friend!', 'miss');
+    });
+
+    this.network.onConnected = () => {
+      this.showToast('Friend Connected! Starting Game...', 'hit');
+      soundManager.play('bell', 0.05, 0.8);
+      this.network.send({ type: 'LOBBY_READY', player: 'blue' });
+      setTimeout(() => {
+        this.startDeployment('ONLINE_P2P', 'blue');
+      }, 1000);
+    };
+
+    this.network.onPacketReceived = (packet) => this.handleNetworkPacket(packet);
+  }
+
+  private setupOnlineGuest(targetId: string) {
+    this.mode = 'ONLINE_P2P';
+    this.myOnlineRole = 'red';
+    this.showToast('Connecting to Host...', 'miss');
+
+    this.network.init(false, targetId).then(() => {
+      this.network.onConnected = () => {
+        this.showToast('Connected to Host! Starting Game...', 'hit');
+        soundManager.play('bell', 0.05, 0.8);
+        this.network.send({ type: 'JOIN_LOBBY', player: 'red' });
+        setTimeout(() => {
+          this.startDeployment('ONLINE_P2P', 'red');
+        }, 1000);
+      };
+    });
+
+    this.network.onPacketReceived = (packet) => this.handleNetworkPacket(packet);
+  }
+
+  private handleNetworkPacket(packet: NetworkPacket) {
+    if (packet.type === 'LOBBY_READY') {
+      this.startDeployment('ONLINE_P2P', 'red');
+    } else if (packet.type === 'DEPLOYMENT_READY') {
+      const incomingSoldiers: Soldier[] = packet.payload;
+      // Filter out existing to avoid duplicates
+      this.soldiers = this.soldiers.filter(s => s.player !== packet.player);
+      this.soldiers.push(...incomingSoldiers);
+      this.opponentDeployed = true;
+
+      if (this.myDeploymentReady) {
+        this.startRPSShowdown();
+      } else {
+        this.showToast('Opponent finished deployment! Place yours.', 'miss');
+      }
+    } else if (packet.type === 'RPS_MOVE') {
+      if (packet.player === 'blue') {
+        this.blueRPSChoice = packet.payload;
+        (this.elements['blue-hand-img'] as HTMLImageElement).src = `/doodles/rps_${packet.payload}.svg`;
+      } else if (packet.player === 'red') {
+        this.redRPSChoice = packet.payload;
+        (this.elements['red-hand-img'] as HTMLImageElement).src = `/doodles/rps_${packet.payload}.svg`;
+      }
+
+      if (this.blueRPSChoice && this.redRPSChoice) {
+        this.resolveRPS();
+      }
+    } else if (packet.type === 'STRIKE') {
+      this.executeStrike(packet.payload.x, packet.payload.y);
+    } else if (packet.type === 'RESTART') {
+      this.resetToMenu();
+    }
+  }
+
+  // ============================================================================
+  // DEPLOYMENT LIFECYCLE
+  // ============================================================================
+
+  public startDeployment(mode: GameMode, assignedRole: PlayerColor = 'blue') {
     this.mode = mode;
     this.soldiers = [];
     this.strikes = [];
     this.turnCount = 0;
     this.totalHits = 0;
     this.totalStrikes = 0;
-    this.activePlayer = 'blue';
-    this.phase = 'DEPLOY_BLUE';
+    this.myDeploymentReady = false;
+    this.opponentDeployed = false;
+
+    if (mode === 'ONLINE_P2P') {
+      this.myOnlineRole = assignedRole;
+      this.activePlayer = assignedRole;
+      this.phase = assignedRole === 'blue' ? 'DEPLOY_BLUE' : 'DEPLOY_RED';
+    } else {
+      this.activePlayer = 'blue';
+      this.phase = 'DEPLOY_BLUE';
+    }
 
     this.elements['menu-modal']?.classList.add('hidden');
     this.elements['soldier-shelf']?.classList.remove('hidden');
 
-    this.sceneManager.setActivePen('blue');
+    this.sceneManager.setActivePen(this.activePlayer);
     this.renderShelf();
     this.updateHUD();
     this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
   }
-
-  private setupOnlineLobby() {
-    this.mode = 'ONLINE_P2P';
-    this.elements['online-controls']?.classList.remove('hidden');
-    const input = this.elements['room-code-input'] as HTMLInputElement;
-
-    this.network.init(true).then((myId) => {
-      if (input) input.value = myId;
-    });
-
-    this.network.onConnected = () => {
-      this.showToast('Friend Connected! Starting Game...', 'hit');
-      setTimeout(() => {
-        this.startDeployment('ONLINE_P2P');
-      }, 1200);
-    };
-
-    this.network.onPacketReceived = (packet) => {
-      this.handleNetworkPacket(packet);
-    };
-  }
-
-  private handleNetworkPacket(packet: any) {
-    if (packet.type === 'DEPLOYMENT_READY') {
-      // Sync opponent soldiers
-      const opponentSoldiers: Soldier[] = packet.payload;
-      this.soldiers.push(...opponentSoldiers);
-      this.startRPSShowdown();
-    } else if (packet.type === 'RPS_MOVE') {
-      this.handleRPSSelection('red', packet.payload);
-    } else if (packet.type === 'STRIKE') {
-      const strikeCoord = packet.payload;
-      this.executeStrike(strikeCoord.x, strikeCoord.y);
-    }
-  }
-
-  // ============================================================================
-  // DEPLOYMENT LOGIC (10 SOLDIERS)
-  // ============================================================================
 
   private renderShelf() {
     const list = this.elements['soldier-list'];
@@ -246,7 +300,6 @@ export class GameController {
       list.appendChild(card);
     });
 
-    // Update Counter & Confirm Button
     const count = currentPlacements.length;
     if (this.elements['placed-counter']) {
       this.elements['placed-counter'].textContent = `${count}/10`;
@@ -268,8 +321,6 @@ export class GameController {
       'scout', 'machinegun', 'mortar', 'radio', 'bunker'
     ];
 
-    // Allowed boundaries (in canvas pixels 1000x700)
-    // Blue is left (60 to 440), Red is right (560 to 940)
     const minX = player === 'blue' ? 70 : 570;
     const maxX = player === 'blue' ? 430 : 930;
     const minY = 80;
@@ -284,9 +335,8 @@ export class GameController {
         x = Math.floor(minX + Math.random() * (maxX - minX));
         y = Math.floor(minY + Math.random() * (maxY - minY));
 
-        // Check clearance with existing soldiers (min 60px distance)
         const conflict = this.soldiers.some(
-          s => s.player === player && Math.hypot(s.x - x, s.y - y) < 60
+          s => s.player === player && Math.hypot(s.x - x, s.y - y) < 55
         );
         if (!conflict) valid = true;
       }
@@ -297,7 +347,7 @@ export class GameController {
         player,
         x,
         y,
-        radius: 22,
+        radius: 24,
         alive: true,
         killProgress: 0,
       });
@@ -322,27 +372,38 @@ export class GameController {
 
     soundManager.play('slap', 0.1, 0.8);
 
+    if (this.mode === 'ONLINE_P2P') {
+      this.myDeploymentReady = true;
+      this.elements['soldier-shelf']?.classList.add('hidden');
+      this.network.send({
+        type: 'DEPLOYMENT_READY',
+        player: this.myOnlineRole,
+        payload: currentPlacements,
+      });
+
+      if (this.opponentDeployed) {
+        this.startRPSShowdown();
+      } else {
+        this.showToast('Deployment confirmed! Waiting for opponent...', 'miss');
+        if (this.elements['banner-text']) {
+          this.elements['banner-text'].innerHTML = 'Waiting for your opponent to finish their mapping...';
+        }
+      }
+      return;
+    }
+
     if (this.phase === 'DEPLOY_BLUE') {
       if (this.mode === 'VS_AI') {
-        // AI deploys Red automatically
         this.autoScatterSoldiers('red');
         this.elements['soldier-shelf']?.classList.add('hidden');
         this.startRPSShowdown();
       } else if (this.mode === 'LOCAL_1V1') {
-        // Privacy Curtain before Red deploys
-        this.phase = 'DEPLOY_RED';
+        this.phase = 'PRIVACY_SWITCH';
         this.elements['soldier-shelf']?.classList.add('hidden');
         this.elements['privacy-curtain']?.classList.remove('hidden');
         if (this.elements['curtain-msg']) {
           this.elements['curtain-msg'].innerHTML = 'Blue Team has finished secret mapping.<br>Hand over the notebook to <strong>Player 2 (RED)</strong>.';
         }
-      } else if (this.mode === 'ONLINE_P2P') {
-        this.elements['soldier-shelf']?.classList.add('hidden');
-        this.network.send({
-          type: 'DEPLOYMENT_READY',
-          payload: currentPlacements,
-        });
-        this.showToast('Waiting for opponent deployment...', 'miss');
       }
     } else if (this.phase === 'DEPLOY_RED') {
       this.elements['soldier-shelf']?.classList.add('hidden');
@@ -351,7 +412,7 @@ export class GameController {
   }
 
   // ============================================================================
-  // ROCK PAPER SCISSORS (FIRST STRIKE INITIATIVE)
+  // ROCK PAPER SCISSORS
   // ============================================================================
 
   private startRPSShowdown() {
@@ -364,33 +425,53 @@ export class GameController {
       this.elements['rps-result-label'].textContent = 'CHOOSE YOUR HAND';
     }
 
-    // Set initial rock doodle images
     (this.elements['blue-hand-img'] as HTMLImageElement).src = '/doodles/rps_rock.svg';
     (this.elements['red-hand-img'] as HTMLImageElement).src = '/doodles/rps_rock.svg';
 
-    if (this.mode === 'VS_AI') {
-      // AI hides choice until Blue picks
+    if (this.mode === 'ONLINE_P2P') {
+      if (this.myOnlineRole === 'blue') {
+        this.elements['blue-rps-buttons']?.classList.remove('hidden');
+        this.elements['red-rps-buttons']?.classList.add('hidden');
+      } else {
+        this.elements['blue-rps-buttons']?.classList.add('hidden');
+        this.elements['red-rps-buttons']?.classList.remove('hidden');
+      }
+    } else if (this.mode === 'VS_AI') {
+      this.elements['blue-rps-buttons']?.classList.remove('hidden');
       this.elements['red-rps-buttons']?.classList.add('hidden');
     } else {
+      // Local Pass & Play: both active
+      this.elements['blue-rps-buttons']?.classList.remove('hidden');
       this.elements['red-rps-buttons']?.classList.remove('hidden');
     }
   }
 
-  private handleRPSSelection(player: PlayerColor, choice: RPSChoice) {
+  private onUserRPSSelect(player: PlayerColor, choice: RPSChoice) {
+    if (this.mode === 'ONLINE_P2P' && player !== this.myOnlineRole) return;
+
     soundManager.play('scratch', 0.1, 0.5);
 
     if (player === 'blue') {
       this.blueRPSChoice = choice;
       (this.elements['blue-hand-img'] as HTMLImageElement).src = `/doodles/rps_${choice}.svg`;
-      if (this.mode === 'VS_AI') {
-        // AI chooses randomly
-        const aiChoices: RPSChoice[] = ['rock', 'paper', 'scissors'];
-        this.redRPSChoice = aiChoices[Math.floor(Math.random() * aiChoices.length)];
-        (this.elements['red-hand-img'] as HTMLImageElement).src = `/doodles/rps_${this.redRPSChoice}.svg`;
-      }
     } else {
       this.redRPSChoice = choice;
       (this.elements['red-hand-img'] as HTMLImageElement).src = `/doodles/rps_${choice}.svg`;
+    }
+
+    if (this.mode === 'ONLINE_P2P') {
+      this.network.send({
+        type: 'RPS_MOVE',
+        player: this.myOnlineRole,
+        payload: choice,
+      });
+      if (this.elements['rps-result-label']) {
+        this.elements['rps-result-label'].textContent = 'HAND LOCKED! WAITING FOR OPPONENT...';
+      }
+    } else if (this.mode === 'VS_AI') {
+      const aiChoices: RPSChoice[] = ['rock', 'paper', 'scissors'];
+      this.redRPSChoice = aiChoices[Math.floor(Math.random() * aiChoices.length)];
+      (this.elements['red-hand-img'] as HTMLImageElement).src = `/doodles/rps_${this.redRPSChoice}.svg`;
     }
 
     if (this.blueRPSChoice && this.redRPSChoice) {
@@ -423,7 +504,7 @@ export class GameController {
     if (label) {
       label.textContent = `${winner.toUpperCase()} WINS INITIATIVE!`;
     }
-    soundManager.play('bell', 0.05, 0.8);
+    soundManager.play('bell', 0.05, 0.85);
 
     setTimeout(() => {
       this.elements['rps-modal']?.classList.add('hidden');
@@ -432,7 +513,7 @@ export class GameController {
   }
 
   // ============================================================================
-  // TURN LOOP (BLIND STRIKE & 3D FOLD)
+  // TURN LOGIC
   // ============================================================================
 
   private beginTurn(player: PlayerColor) {
@@ -443,7 +524,6 @@ export class GameController {
     this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
 
     if (this.mode === 'VS_AI' && player === 'red') {
-      // Trigger AI strike after deliberate human-like pause
       setTimeout(() => {
         this.executeAITurn();
       }, 1400);
@@ -464,13 +544,13 @@ export class GameController {
 
   private handlePaperClick(e: MouseEvent) {
     if (this.phase === 'DEPLOY_BLUE' || this.phase === 'DEPLOY_RED') {
-      // Placing soldiers manually on click
       if (!this.selectedSoldierType) return;
+      if (this.mode === 'ONLINE_P2P' && this.activePlayer !== this.myOnlineRole) return;
+
       const hit = this.sceneManager.raycastPaper(e.clientX, e.clientY);
       if (!hit) return;
 
       const coords = this.paperCanvas.uvToCanvasCoords(hit.u, hit.v);
-      // Validate placement field
       const isBlue = this.activePlayer === 'blue';
       const isValidSide = isBlue
         ? coords.x >= 60 && coords.x <= 440
@@ -487,15 +567,14 @@ export class GameController {
         player: this.activePlayer,
         x: coords.x,
         y: coords.y,
-        radius: 22,
+        radius: 24,
         alive: true,
         killProgress: 0,
       });
 
-      soundManager.play('dot', 0.1, 0.7);
+      soundManager.play('dot', 0.1, 0.8);
       soundManager.play('scratch', 0.15, 0.5);
 
-      // Select next available type automatically
       const currentPlacements = this.soldiers.filter(s => s.player === this.activePlayer);
       const placedTypes = new Set(currentPlacements.map(s => s.type));
       const allTypes: SoldierType[] = [
@@ -510,20 +589,30 @@ export class GameController {
     }
 
     if (this.phase !== 'TURN_AIM') return;
-    if (this.mode === 'VS_AI' && this.activePlayer === 'red') return; // AI's turn
+    if (this.mode === 'VS_AI' && this.activePlayer === 'red') return;
+
+    if (this.mode === 'ONLINE_P2P' && this.activePlayer !== this.myOnlineRole) {
+      this.showToast("Opponent's turn to aim! Please wait...", 'miss');
+      return;
+    }
 
     const hit = this.sceneManager.raycastPaper(e.clientX, e.clientY);
     if (!hit) return;
 
     const coords = this.paperCanvas.uvToCanvasCoords(hit.u, hit.v);
-
-    // Validate that player puts the strike dot on their OWN half of the paper!
     const isBlue = this.activePlayer === 'blue';
     const isOwnHalf = isBlue ? coords.x < 500 : coords.x > 500;
 
     if (!isOwnHalf) {
       this.showToast(`Draw your dot on YOUR ${this.activePlayer.toUpperCase()} half!`, 'miss');
       return;
+    }
+
+    if (this.mode === 'ONLINE_P2P') {
+      this.network.send({
+        type: 'STRIKE',
+        payload: { x: coords.x, y: coords.y },
+      });
     }
 
     this.executeStrike(coords.x, coords.y);
@@ -534,29 +623,23 @@ export class GameController {
     this.totalStrikes++;
     this.turnCount++;
 
-    // Tactile pen tap
     this.sceneManager.isPenWriting = true;
-    soundManager.play('dot', 0.05, 0.9);
+    soundManager.play('dot', 0.05, 0.95);
     soundManager.play('scratch', 0.1, 0.6);
 
     setTimeout(() => {
       this.sceneManager.isPenWriting = false;
-
-      // Start 3D paper curl
-      soundManager.play('fold', 0.1, 0.85);
+      soundManager.play('fold', 0.1, 0.9);
 
       this.sceneManager.paperFold.triggerFold(
         this.activePlayer,
         () => {
-          // Peak Contact (180 fold press): Table slap + ink mirror math!
+          // Contact: Mirror ink coordinate
           soundManager.play('slap', 0.08, 1.0);
 
-          // Mirror coordinate across center crease (x = 500)
-          // formula: mirroredX = 2 * creaseX - strikeX = 1000 - strikeX
           const mirroredX = 1000 - strikeX;
           const mirroredY = strikeY;
 
-          // Check hit against opponent soldiers
           const targetPlayer: PlayerColor = this.activePlayer === 'blue' ? 'red' : 'blue';
           const opponentLiving = this.soldiers.filter(s => s.player === targetPlayer && s.alive);
 
@@ -592,13 +675,13 @@ export class GameController {
           });
         },
         () => {
-          // Unfold complete: Reveal paper and check game over
-          soundManager.play('unfold', 0.1, 0.7);
+          // Unfold complete
+          soundManager.play('unfold', 0.1, 0.75);
           this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
           this.checkGameStatus();
         }
       );
-    }, 280);
+    }, 240);
   }
 
   private checkGameStatus() {
@@ -612,7 +695,6 @@ export class GameController {
     } else if (redAlive === 0) {
       this.triggerVictory('blue');
     } else {
-      // Next turn
       const nextPlayer: PlayerColor = this.activePlayer === 'blue' ? 'red' : 'blue';
       this.beginTurn(nextPlayer);
     }
@@ -622,22 +704,20 @@ export class GameController {
     this.phase = 'GAME_OVER';
     soundManager.play('bell', 0.02, 1.0);
 
-    // Confetti burst
     confetti({
-      particleCount: 120,
-      spread: 80,
+      particleCount: 130,
+      spread: 90,
       origin: { y: 0.6 },
-      colors: winner === 'blue' ? ['#103ba6', '#4a90e2', '#ffffff'] : ['#ba1424', '#e74c3c', '#ffffff'],
+      colors: winner === 'blue' ? ['#0a329e', '#4a90e2', '#ffffff'] : ['#ba1222', '#e74c3c', '#ffffff'],
     });
 
     this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
 
-    // Show Victory Screen
     setTimeout(() => {
       this.elements['victory-modal']?.classList.remove('hidden');
       if (this.elements['winner-title']) {
         this.elements['winner-title'].textContent = `${winner.toUpperCase()} TEAM WINS!`;
-        this.elements['winner-title'].style.color = winner === 'blue' ? '#103ba6' : '#ba1424';
+        this.elements['winner-title'].style.color = winner === 'blue' ? '#0a329e' : '#ba1222';
       }
       if (this.elements['stat-turns']) {
         this.elements['stat-turns'].textContent = `${this.turnCount}`;
@@ -652,32 +732,18 @@ export class GameController {
     }, 800);
   }
 
-  // ============================================================================
-  // AI OPPONENT LOGIC ("GENERAL SCRIBBLE")
-  // ============================================================================
-
   private executeAITurn() {
-    // AI is Red, shooting at Blue's side (mirrored target is in 60..440, so strike is in 560..940)
-    // AI has intelligent hunting heuristic:
-    // 1. Searches living targets with slight human aim noise (spread of 15px)
-    // 2. Occasionally tests a blind coordinate
     const blueLiving = this.soldiers.filter(s => s.player === 'blue' && s.alive);
     let targetX = 0, targetY = 0;
 
     if (blueLiving.length > 0 && Math.random() < 0.65) {
-      // Pick a random living blue soldier and aim near it
       const target = blueLiving[Math.floor(Math.random() * blueLiving.length)];
-      // Add slight human error noise (+/- 25px)
-      const noiseX = (Math.random() - 0.5) * 50;
-      const noiseY = (Math.random() - 0.5) * 50;
-
+      const noiseX = (Math.random() - 0.5) * 45;
+      const noiseY = (Math.random() - 0.5) * 45;
       const aimOpponentX = Math.max(70, Math.min(430, target.x + noiseX));
       targetY = Math.max(80, Math.min(620, target.y + noiseY));
-
-      // Mirror onto Red's half (x = 1000 - aimOpponentX)
       targetX = 1000 - aimOpponentX;
     } else {
-      // Random blind exploration strike on Red's half (560 to 930)
       targetX = Math.floor(570 + Math.random() * 360);
       targetY = Math.floor(80 + Math.random() * 540);
     }
@@ -685,9 +751,19 @@ export class GameController {
     this.executeStrike(targetX, targetY);
   }
 
-  // ============================================================================
-  // HUD & TOAST NOTIFICATIONS
-  // ============================================================================
+  private resetToMenu() {
+    this.elements['victory-modal']?.classList.add('hidden');
+    this.elements['menu-modal']?.classList.remove('hidden');
+    this.phase = 'MENU';
+    this.soldiers = [];
+    this.strikes = [];
+    this.turnCount = 0;
+    this.totalHits = 0;
+    this.totalStrikes = 0;
+    this.myDeploymentReady = false;
+    this.opponentDeployed = false;
+    this.paperCanvas.render(this.soldiers, this.strikes, this.phase, 'blue', null);
+  }
 
   private updateHUD() {
     const blueAlive = this.soldiers.filter(s => s.player === 'blue' && s.alive).length;
@@ -696,6 +772,15 @@ export class GameController {
     if (this.elements['blue-count']) this.elements['blue-count'].textContent = `${blueAlive}/10`;
     if (this.elements['red-count']) this.elements['red-count'].textContent = `${redAlive}/10`;
 
+    // Active player highlight on scoreboard
+    if (this.activePlayer === 'blue') {
+      this.elements['blue-score-box']?.style.setProperty('outline', '2px solid #0a329e');
+      this.elements['red-score-box']?.style.removeProperty('outline');
+    } else {
+      this.elements['red-score-box']?.style.setProperty('outline', '2px solid #ba1222');
+      this.elements['blue-score-box']?.style.removeProperty('outline');
+    }
+
     const banner = this.elements['banner-text'];
     if (banner) {
       if (this.phase === 'DEPLOY_BLUE') {
@@ -703,9 +788,13 @@ export class GameController {
       } else if (this.phase === 'DEPLOY_RED') {
         banner.innerHTML = 'Player 2: Secretly place your <strong>10 Red Soldiers</strong> on the right side.';
       } else if (this.phase === 'TURN_AIM') {
-        banner.innerHTML = `<strong>${this.activePlayer.toUpperCase()} TURN:</strong> Put a pen dot on YOUR side to guess enemy positions!`;
+        if (this.mode === 'ONLINE_P2P' && this.activePlayer !== this.myOnlineRole) {
+          banner.innerHTML = `<strong>OPPONENT'S TURN (${this.activePlayer.toUpperCase()}):</strong> Opponent is aiming... Watch the paper fold!`;
+        } else {
+          banner.innerHTML = `<strong>${this.activePlayer.toUpperCase()} TURN:</strong> Put a pen dot on YOUR side to guess enemy positions!`;
+        }
       } else if (this.phase === 'TURN_FOLD') {
-        banner.innerHTML = 'Folding notebook paper... Transferring ink!';
+        banner.innerHTML = 'Folding notebook paper... Transferring fresh ink!';
       }
     }
   }

@@ -1,8 +1,8 @@
 import Peer, { DataConnection } from 'peerjs';
-import { Soldier, RPSChoice } from '../game/types';
 
 export interface NetworkPacket {
-  type: 'DEPLOYMENT_READY' | 'RPS_MOVE' | 'STRIKE' | 'RESTART';
+  type: 'JOIN_LOBBY' | 'LOBBY_READY' | 'DEPLOYMENT_READY' | 'RPS_MOVE' | 'STRIKE' | 'RESTART';
+  player?: 'blue' | 'red';
   payload?: any;
 }
 
@@ -21,7 +21,6 @@ export class PeerConnection {
     this.isHost = isHost;
 
     return new Promise((resolve, reject) => {
-      // Create random short memorable peer id
       const prefix = 'paper-war-';
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
       const chosenId = isHost ? `${prefix}${randomSuffix}` : undefined;
@@ -52,7 +51,9 @@ export class PeerConnection {
 
   public connectToPeer(targetId: string) {
     if (!this.peer) return;
-    const connection = this.peer.connect(targetId);
+    const connection = this.peer.connect(targetId, {
+      reliable: true,
+    });
     this.setupConnection(connection);
   }
 
