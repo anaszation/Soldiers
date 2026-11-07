@@ -1,0 +1,619 @@
+/* ==============================================================================
+   SOLDIERS (Paper War 1v1) — Tactile Nostalgic Styling
+   No generic AI slop: Real paper grain, handwritten strokes, wooden desk mood
+   ============================================================================== */
+
+:root {
+  --blue-ink: #103ba6;
+  --blue-ink-dark: #092570;
+  --blue-ink-light: #e6edff;
+  --red-ink: #ba1424;
+  --red-ink-dark: #7a0c16;
+  --red-ink-light: #ffe8eb;
+  --pencil-lead: #2b2e34;
+  --paper-cream: #faf8f2;
+  --paper-shadow: rgba(30, 20, 10, 0.18);
+  --paper-border: #d4ccb8;
+  --desk-wood: #1e130b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--desk-wood);
+  font-family: 'Caveat', cursive, sans-serif;
+  color: var(--pencil-lead);
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ==============================================================================
+   HEADER & SCOREBOARD
+   ============================================================================== */
+#game-header {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+#game-header > * {
+  pointer-events: auto;
+}
+
+.logo-title {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 26px;
+  letter-spacing: 1.5px;
+  color: #fff6e8;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.logo-title span {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  color: #d1b48c;
+  vertical-align: middle;
+}
+
+.tagline {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #b0a08d;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Scoreboard */
+.scoreboard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--paper-cream);
+  padding: 8px 18px;
+  border-radius: 4px;
+  border: 2px solid var(--paper-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.player-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 3px;
+}
+
+.blue-badge {
+  background: var(--blue-ink-light);
+  color: var(--blue-ink-dark);
+  border: 1px solid var(--blue-ink);
+}
+
+.red-badge {
+  background: var(--red-ink-light);
+  color: var(--red-ink-dark);
+  border: 1px solid var(--red-ink);
+}
+
+.p-count {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.vs-divider {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 14px;
+  color: #7d7265;
+}
+
+/* ==============================================================================
+   BUTTONS & TACTILE CONTROLS
+   ============================================================================== */
+.paper-btn {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  background: var(--paper-cream);
+  color: var(--pencil-lead);
+  border: 2px solid #5a4b3c;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #3b3024;
+  transition: all 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.paper-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 #3b3024;
+}
+
+.paper-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #3b3024;
+}
+
+.paper-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 1px 1px 0 #3b3024;
+}
+
+.primary-btn {
+  background: #27ae60;
+  color: #ffffff;
+  border-color: #1e8449;
+  box-shadow: 2px 2px 0 #145a32;
+}
+
+.primary-btn:hover {
+  background: #2ecc71;
+}
+
+.sm-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.lg-btn {
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+/* Action Banner */
+.banner {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: var(--paper-cream);
+  color: var(--pencil-lead);
+  padding: 8px 24px;
+  font-size: 20px;
+  font-weight: 700;
+  border: 2px dashed #8c7b69;
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  text-align: center;
+  max-width: 80%;
+  transition: all 0.25s ease;
+}
+
+/* ==============================================================================
+   SOLDIER SHELF (DEPLOYMENT PHASE)
+   ============================================================================== */
+#soldier-shelf {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 900px;
+  background: var(--paper-cream);
+  border: 2px solid var(--paper-border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.shelf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.soldier-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 10px;
+}
+
+.soldier-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.soldier-card:hover {
+  border-color: var(--blue-ink);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.soldier-card.selected {
+  border-color: var(--blue-ink);
+  background: var(--blue-ink-light);
+  box-shadow: 0 0 0 2px var(--blue-ink);
+}
+
+.soldier-card.placed {
+  opacity: 0.4;
+  border-color: #aaa;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.soldier-card img {
+  width: 48px;
+  height: 48px;
+}
+
+.soldier-card span {
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 4px;
+  text-align: center;
+}
+
+/* ==============================================================================
+   MODALS & DIALOGS
+   ============================================================================== */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 10, 6, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.paper-dialog {
+  background: var(--paper-cream);
+  border: 3px solid #4a3e31;
+  border-radius: 8px;
+  padding: 32px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.04);
+  max-width: 580px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+}
+
+.staple-corner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 28px;
+  height: 6px;
+  background: #95a5a6;
+  border: 1px solid #7f8c8d;
+  transform: rotate(-45deg);
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.game-logo {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 48px;
+  letter-spacing: 2px;
+  color: var(--blue-ink);
+  line-height: 1;
+}
+
+.game-sublogo {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--red-ink);
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+
+.menu-intro p {
+  font-size: 18px;
+  line-height: 1.4;
+  color: #4a443b;
+  margin-bottom: 24px;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.mode-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 2px solid #5a4b3c;
+  padding: 12px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 3px 3px 0 #3b3024;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.mode-card:hover {
+  background: #fffdf5;
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0 #3b3024;
+}
+
+.mode-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0;
+}
+
+.mode-badge {
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  background: #e67e22;
+  color: #fff;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.mode-icon {
+  font-size: 32px;
+}
+
+.mode-info h4 {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  color: #111;
+}
+
+.mode-info p {
+  font-size: 14px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.room-box {
+  background: #f0ece1;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px dashed #888;
+}
+
+.room-input-row, .room-join-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.room-input-row input, .room-join-row input {
+  flex: 1;
+  padding: 6px 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  border: 1px solid #999;
+  border-radius: 4px;
+}
+
+.menu-footer {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: #8c7b69;
+}
+
+/* ==============================================================================
+   ROCK PAPER SCISSORS DIALOG
+   ============================================================================== */
+.rps-dialog {
+  max-width: 650px;
+}
+
+.rps-arena {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.rps-player-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.col-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.blue-text { color: var(--blue-ink); }
+.red-text { color: var(--red-ink); }
+
+.rps-hand-display {
+  width: 100px;
+  height: 100px;
+  background: #ffffff;
+  border: 3px solid #333;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.rps-hand-display img {
+  width: 70px;
+  height: 70px;
+}
+
+.rps-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.rps-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  background: #ffffff;
+  border: 2px solid #555;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.rps-btn:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+}
+
+.rps-vs-sign {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 20px;
+  color: #7f8c8d;
+  max-width: 140px;
+  text-align: center;
+}
+
+/* ==============================================================================
+   VICTORY DIALOG
+   ============================================================================== */
+.victory-ribbon {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 24px;
+  color: #f39c12;
+  margin-bottom: 6px;
+}
+
+.winner-heading {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 42px;
+  color: var(--blue-ink);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.battle-stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 24px 0;
+  padding: 14px;
+  background: #ffffff;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-num {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 28px;
+  color: #333;
+}
+
+.stat-lbl {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #777;
+}
+
+/* ==============================================================================
+   TOAST FEEDBACK
+   ============================================================================== */
+.toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #111;
+  color: #fff;
+  font-family: 'Permanent Marker', cursive;
+  font-size: 32px;
+  letter-spacing: 2px;
+  padding: 16px 36px;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  pointer-events: none;
+  animation: toastPop 1.4s ease forwards;
+}
+
+.toast.hit {
+  background: var(--red-ink);
+  border: 3px solid #ffffff;
+}
+
+.toast.miss {
+  background: var(--blue-ink);
+  border: 3px solid #ffffff;
+}
+
+@keyframes toastPop {
+  0% { transform: translate(-50%, -40%) scale(0.6); opacity: 0; }
+  25% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  35% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+  80% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+  100% { transform: translate(-50%, -60%) scale(0.9); opacity: 0; }
+}
+
+.hidden {
+  display: none !important;
+}

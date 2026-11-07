@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soldiers — Paper War 1v1</title>
+  <link rel="icon" type="image/svg+xml" href="/doodles/soldier_tank_blue.svg" />
+  <!-- Nostalgic handwritten & tactile typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Permanent+Marker&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 3D Three.js WebGL Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Retro Desk HUD & Controls Overlay -->
+    <header id="game-header">
+      <div class="header-left">
+        <h1 class="logo-title">SOLDIERS <span>[Paper War 1v1]</span></h1>
+        <p class="tagline">Nostalgic Notebook Paper Duel • 10 Soldiers • The Magic Fold</p>
+      </div>
+
+      <div class="header-center">
+        <!-- Live Scoreboard -->
+        <div class="scoreboard">
+          <div class="player-score blue-badge" id="blue-score-box">
+            <span class="pen-icon">🖊️</span>
+            <span class="p-name">BLUE TEAM</span>
+            <span class="p-count" id="blue-count">10/10</span>
+          </div>
+          <div class="vs-divider">VS</div>
+          <div class="player-score red-badge" id="red-score-box">
+            <span class="pen-icon">🖊️</span>
+            <span class="p-name">RED TEAM</span>
+            <span class="p-count" id="red-count">10/10</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- View Toggle & Audio Controls -->
+        <button id="btn-camera" class="paper-btn icon-btn" title="Toggle 3D Cinematic / Tactical Top-down View">
+          📐 <span id="cam-label">Tactical View</span>
+        </button>
+        <button id="btn-sound" class="paper-btn icon-btn" title="Toggle ASMR Audio">
+          🔊 <span id="sound-label">Audio ON</span>
+        </button>
+        <button id="btn-help" class="paper-btn icon-btn" title="Game Rules">
+          ❓ Rules
+        </button>
+      </div>
+    </header>
+
+    <!-- Phase Instruction Banner -->
+    <div id="action-banner" class="banner">
+      <div id="banner-text">Welcome to Paper War! Select game mode to start.</div>
+    </div>
+
+    <!-- Floating Soldier Selection Shelf (During Deployment) -->
+    <div id="soldier-shelf" class="hidden">
+      <div class="shelf-header">
+        <span id="shelf-title">Select Soldier to Place (10 each)</span>
+        <div class="shelf-actions">
+          <button id="btn-auto-place" class="paper-btn sm-btn">⚡ Auto Scatter</button>
+          <button id="btn-clear-placements" class="paper-btn sm-btn">🔄 Clear</button>
+          <button id="btn-confirm-deployment" class="paper-btn sm-btn primary-btn" disabled>
+            ✅ Confirm Deployment (<span id="placed-counter">0/10</span>)
+          </button>
+        </div>
+      </div>
+      <div id="soldier-list" class="soldier-grid">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Rock Paper Scissors Showdown Modal -->
+    <div id="rps-modal" class="modal-overlay hidden">
+      <div class="paper-dialog rps-dialog">
+        <h2 class="dialog-title">✊ ✋ ✌️ FIRST STRIKE INITIATIVE</h2>
+        <p class="dialog-subtitle">Rock, Paper, Scissors showdown to decide who shoots first!</p>
+        
+        <div class="rps-arena">
+          <div class="rps-player-col" id="rps-blue-col">
+            <span class="col-label blue-text">PLAYER 1 (BLUE)</span>
+            <div class="rps-hand-display" id="blue-hand-display">
+              <img id="blue-hand-img" src="/doodles/rps_rock.svg" alt="hand" />
+            </div>
+            <div class="rps-buttons" id="blue-rps-buttons">
+              <button class="rps-btn" data-choice="rock">✊ Rock</button>
+              <button class="rps-btn" data-choice="paper">✋ Paper</button>
+              <button class="rps-btn" data-choice="scissors">✌️ Scissors</button>
+            </div>
+          </div>
+
+          <div class="rps-vs-sign" id="rps-result-label">CHOOSE YOUR HAND</div>
+
+          <div class="rps-player-col" id="rps-red-col">
+            <span class="col-label red-text">PLAYER 2 (RED)</span>
+            <div class="rps-hand-display" id="red-hand-display">
+              <img id="red-hand-img" src="/doodles/rps_rock.svg" alt="hand" />
+            </div>
+            <div class="rps-buttons" id="red-rps-buttons">
+              <button class="rps-btn" data-choice="rock">✊ Rock</button>
+              <button class="rps-btn" data-choice="paper">✋ Paper</button>
+              <button class="rps-btn" data-choice="scissors">✌️ Scissors</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Menu / Mode Selector Modal -->
+    <div id="menu-modal" class="modal-overlay">
+      <div class="paper-dialog menu-dialog">
+        <div class="staple-corner"></div>
+        <h1 class="game-logo">SOLDIERS</h1>
+        <h3 class="game-sublogo">THE NOSTALGIC 1v1 PAPER WAR</h3>
+
+        <div class="menu-intro">
+          <p>Draw your soldiers on notebook paper. Aim a blind ink dot on your half. <strong>Watch the paper fold in 3D</strong> to press and mirror the ink onto the enemy field!</p>
+        </div>
+
+        <div class="mode-options">
+          <button id="btn-mode-ai" class="mode-card">
+            <div class="mode-badge">POPULAR</div>
+            <div class="mode-icon">🤖</div>
+            <div class="mode-info">
+              <h4>VS AI "GENERAL SCRIBBLE"</h4>
+              <p>Solo duel against intelligent computer opponent.</p>
+            </div>
+          </button>
+
+          <button id="btn-mode-local" class="mode-card">
+            <div class="mode-badge">CLASSIC</div>
+            <div class="mode-icon">👥</div>
+            <div class="mode-info">
+              <h4>LOCAL PASS & PLAY (1v1)</h4>
+              <p>Two players taking turns on the same screen with screen fold privacy.</p>
+            </div>
+          </button>
+
+          <button id="btn-mode-online" class="mode-card">
+            <div class="mode-badge">P2P WEBRTC</div>
+            <div class="mode-icon">🌐</div>
+            <div class="mode-info">
+              <h4>ONLINE DUEL (SHARE LINK)</h4>
+              <p>Play 1v1 with a friend across the web. No servers or accounts needed.</p>
+            </div>
+          </button>
+        </div>
+
+        <!-- Online Room Controls (Hidden by default) -->
+        <div id="online-controls" class="hidden">
+          <div class="room-box">
+            <p id="room-status-text">Your Peer ID:</p>
+            <div class="room-input-row">
+              <input type="text" id="room-code-input" placeholder="Generating room..." readonly />
+              <button id="btn-copy-room" class="paper-btn sm-btn">📋 Copy</button>
+            </div>
+            <div class="room-join-row">
+              <input type="text" id="join-code-input" placeholder="Or enter Friend's Room ID..." />
+              <button id="btn-connect-peer" class="paper-btn sm-btn primary-btn">Connect</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-footer">
+          <span>Realistic 3D Paper Physics • Ballpoint Ink Dynamics • Zero AI Slop</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pass-and-Play Privacy Curtain Modal -->
+    <div id="privacy-curtain" class="modal-overlay hidden">
+      <div class="paper-dialog curtain-dialog">
+        <h2>🔒 HAND OVER THE NOTEBOOK!</h2>
+        <p id="curtain-msg">Player 1 finished secret mapping. Turn the screen to <strong>Player 2 (RED)</strong>.</p>
+        <button id="btn-curtain-continue" class="paper-btn primary-btn lg-btn">I am Ready to Deploy</button>
+      </div>
+    </div>
+
+    <!-- Victory Screen Modal -->
+    <div id="victory-modal" class="modal-overlay hidden">
+      <div class="paper-dialog victory-dialog">
+        <div class="victory-ribbon">🏆 VICTORY!</div>
+        <h1 id="winner-title" class="winner-heading">BLUE TEAM WINS!</h1>
+        <p id="winner-desc">All 10 enemy soldiers have been eliminated across the crease!</p>
+
+        <div class="battle-stats">
+          <div class="stat-item">
+            <span class="stat-num" id="stat-turns">18</span>
+            <span class="stat-lbl">Turns Played</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num" id="stat-accuracy">55%</span>
+            <span class="stat-lbl">Strike Accuracy</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num" id="stat-hits">10</span>
+            <span class="stat-lbl">Total Kills</span>
+          </div>
+        </div>
+
+        <button id="btn-play-again" class="paper-btn primary-btn lg-btn">Play Another Notebook War</button>
+      </div>
+    </div>
+
+    <!-- Rules Help Modal -->
+    <div id="rules-modal" class="modal-overlay hidden">
+      <div class="paper-dialog rules-dialog">
+        <h2 class="dialog-title">📖 HOW TO PLAY PAPER WAR</h2>
+        <div class="rules-body">
+          <ol>
+            <li><strong>Step 1: Secret Placement</strong> — Both players place their 10 soldiers anywhere on their half of the notebook sheet. Opponent positions are kept hidden.</li>
+            <li><strong>Step 2: Rock-Paper-Scissors</strong> — Quick showdown to decide who gets the first strike.</li>
+            <li><strong>Step 3: The Blind Strike</strong> — On your turn, mark a dot with your pen on <em>your own side</em> of the paper where you predict the mirrored enemy soldier is hiding.</li>
+            <li><strong>Step 4: The 3D Fold</strong> — The paper physically lifts, curves, and slaps down on the crease! If your mirrored dot touches an enemy soldier, that soldier is killed with an ink splatter.</li>
+            <li><strong>Step 5: Historical Smudges</strong> — Missed shots leave smudges on the paper, giving you clues to adjust your aim!</li>
+            <li><strong>Victory</strong> — The first player to eliminate all 10 enemy soldiers wins the war.</li>
+          </ol>
+        </div>
+        <button id="btn-close-rules" class="paper-btn sm-btn">Got It!</button>
+      </div>
+    </div>
+
+    <!-- Feedback Float Toast -->
+    <div id="toast-message" class="toast hidden">DIRECT HIT!</div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
