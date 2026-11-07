@@ -63,12 +63,28 @@ export class GameController {
 
   private bindEvents() {
     // Mode Buttons
-    this.elements['btn-mode-ai']?.addEventListener('click', () => this.startDeployment('VS_AI'));
-    this.elements['btn-mode-local']?.addEventListener('click', () => this.startDeployment('LOCAL_1V1'));
-    this.elements['btn-mode-online']?.addEventListener('click', () => this.setupOnlineHost());
+    this.elements['btn-mode-ai']?.addEventListener('click', () => {
+      soundManager.play('click');
+      soundManager.startBackgroundMusic();
+      this.startDeployment('VS_AI');
+    });
+
+    this.elements['btn-mode-local']?.addEventListener('click', () => {
+      soundManager.play('click');
+      soundManager.startBackgroundMusic();
+      this.startDeployment('LOCAL_1V1');
+    });
+
+    this.elements['btn-mode-online']?.addEventListener('click', () => {
+      soundManager.play('click');
+      soundManager.startBackgroundMusic();
+      this.setupOnlineHost();
+    });
 
     // Online Join Room
     this.elements['btn-connect-peer']?.addEventListener('click', () => {
+      soundManager.play('click');
+      soundManager.startBackgroundMusic();
       const input = this.elements['join-code-input'] as HTMLInputElement;
       const targetId = input?.value.trim();
       if (targetId) {
@@ -77,6 +93,7 @@ export class GameController {
     });
 
     this.elements['btn-copy-room']?.addEventListener('click', () => {
+      soundManager.play('click');
       const input = this.elements['room-code-input'] as HTMLInputElement;
       if (input && input.value) {
         navigator.clipboard.writeText(input.value);
@@ -85,16 +102,26 @@ export class GameController {
     });
 
     // Deployment Controls
-    this.elements['btn-auto-place']?.addEventListener('click', () => this.autoScatterSoldiers(this.activePlayer));
-    this.elements['btn-clear-placements']?.addEventListener('click', () => this.clearPlacements(this.activePlayer));
+    this.elements['btn-auto-place']?.addEventListener('click', () => {
+      soundManager.play('click');
+      this.autoScatterSoldiers(this.activePlayer);
+    });
+
+    this.elements['btn-clear-placements']?.addEventListener('click', () => {
+      soundManager.play('click');
+      this.clearPlacements(this.activePlayer);
+    });
+
     this.elements['btn-confirm-deployment']?.addEventListener('click', () => this.confirmDeployment());
 
     // Privacy Curtain Continue
     this.elements['btn-curtain-continue']?.addEventListener('click', () => {
+      soundManager.play('click');
       this.elements['privacy-curtain']?.classList.add('hidden');
       this.activePlayer = 'red';
       this.phase = 'DEPLOY_RED';
       this.sceneManager.setActivePen('red');
+      this.sceneManager.isPenActiveOnPaper = true;
       this.elements['soldier-shelf']?.classList.remove('hidden');
       this.renderShelf();
       this.updateHUD();
@@ -118,6 +145,7 @@ export class GameController {
 
     // Play Again
     this.elements['btn-play-again']?.addEventListener('click', () => {
+      soundManager.play('click');
       if (this.mode === 'ONLINE_P2P') {
         this.network.send({ type: 'RESTART' });
       }
@@ -126,6 +154,7 @@ export class GameController {
 
     // View & Sound Controls
     this.elements['btn-camera']?.addEventListener('click', () => {
+      soundManager.play('click');
       const isTactical = this.sceneManager.toggleCameraView();
       if (this.elements['cam-label']) {
         this.elements['cam-label'].textContent = isTactical ? 'Tactical View' : 'Cinematic View';
@@ -140,10 +169,12 @@ export class GameController {
     });
 
     this.elements['btn-help']?.addEventListener('click', () => {
+      soundManager.play('click');
       this.elements['rules-modal']?.classList.remove('hidden');
     });
 
     this.elements['btn-close-rules']?.addEventListener('click', () => {
+      soundManager.play('click');
       this.elements['rules-modal']?.classList.add('hidden');
     });
 
@@ -170,7 +201,7 @@ export class GameController {
 
     this.network.onConnected = () => {
       this.showToast('Friend Connected! Starting Game...', 'hit');
-      soundManager.play('bell', 0.05, 0.8);
+      soundManager.play('bell', 0.05, 0.85);
       this.network.send({ type: 'LOBBY_READY', player: 'blue' });
       setTimeout(() => {
         this.startDeployment('ONLINE_P2P', 'blue');
@@ -188,7 +219,7 @@ export class GameController {
     this.network.init(false, targetId).then(() => {
       this.network.onConnected = () => {
         this.showToast('Connected to Host! Starting Game...', 'hit');
-        soundManager.play('bell', 0.05, 0.8);
+        soundManager.play('bell', 0.05, 0.85);
         this.network.send({ type: 'JOIN_LOBBY', player: 'red' });
         setTimeout(() => {
           this.startDeployment('ONLINE_P2P', 'red');
@@ -204,7 +235,6 @@ export class GameController {
       this.startDeployment('ONLINE_P2P', 'red');
     } else if (packet.type === 'DEPLOYMENT_READY') {
       const incomingSoldiers: Soldier[] = packet.payload;
-      // Filter out existing to avoid duplicates
       this.soldiers = this.soldiers.filter(s => s.player !== packet.player);
       this.soldiers.push(...incomingSoldiers);
       this.opponentDeployed = true;
@@ -260,6 +290,7 @@ export class GameController {
     this.elements['soldier-shelf']?.classList.remove('hidden');
 
     this.sceneManager.setActivePen(this.activePlayer);
+    this.sceneManager.isPenActiveOnPaper = true;
     this.renderShelf();
     this.updateHUD();
     this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
@@ -292,7 +323,7 @@ export class GameController {
       card.addEventListener('click', () => {
         if (!isPlaced) {
           this.selectedSoldierType = type;
-          soundManager.play('scratch', 0.1, 0.4);
+          soundManager.play('click', 0.08, 0.5);
           this.renderShelf();
         }
       });
@@ -375,6 +406,7 @@ export class GameController {
     if (this.mode === 'ONLINE_P2P') {
       this.myDeploymentReady = true;
       this.elements['soldier-shelf']?.classList.add('hidden');
+      this.sceneManager.isPenActiveOnPaper = false; // Dock pen
       this.network.send({
         type: 'DEPLOYMENT_READY',
         player: this.myOnlineRole,
@@ -396,10 +428,12 @@ export class GameController {
       if (this.mode === 'VS_AI') {
         this.autoScatterSoldiers('red');
         this.elements['soldier-shelf']?.classList.add('hidden');
+        this.sceneManager.isPenActiveOnPaper = false;
         this.startRPSShowdown();
       } else if (this.mode === 'LOCAL_1V1') {
         this.phase = 'PRIVACY_SWITCH';
         this.elements['soldier-shelf']?.classList.add('hidden');
+        this.sceneManager.isPenActiveOnPaper = false; // Dock pen during curtain
         this.elements['privacy-curtain']?.classList.remove('hidden');
         if (this.elements['curtain-msg']) {
           this.elements['curtain-msg'].innerHTML = 'Blue Team has finished secret mapping.<br>Hand over the notebook to <strong>Player 2 (RED)</strong>.';
@@ -407,6 +441,7 @@ export class GameController {
       }
     } else if (this.phase === 'DEPLOY_RED') {
       this.elements['soldier-shelf']?.classList.add('hidden');
+      this.sceneManager.isPenActiveOnPaper = false;
       this.startRPSShowdown();
     }
   }
@@ -419,6 +454,7 @@ export class GameController {
     this.phase = 'RPS_STANDOFF';
     this.blueRPSChoice = null;
     this.redRPSChoice = null;
+    this.sceneManager.isPenActiveOnPaper = false; // Pens stay docked during RPS
 
     this.elements['rps-modal']?.classList.remove('hidden');
     if (this.elements['rps-result-label']) {
@@ -520,18 +556,30 @@ export class GameController {
     this.activePlayer = player;
     this.phase = 'TURN_AIM';
     this.sceneManager.setActivePen(player);
+
+    // Only allow pen to hover on paper if it is THIS player's turn!
+    if (this.mode === 'ONLINE_P2P') {
+      this.sceneManager.isPenActiveOnPaper = (player === this.myOnlineRole);
+    } else if (this.mode === 'VS_AI') {
+      this.sceneManager.isPenActiveOnPaper = (player === 'blue');
+    } else {
+      this.sceneManager.isPenActiveOnPaper = true;
+    }
+
     this.updateHUD();
     this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
 
     if (this.mode === 'VS_AI' && player === 'red') {
       setTimeout(() => {
         this.executeAITurn();
-      }, 1400);
+      }, 1300);
     }
   }
 
   private handleMouseMove(e: MouseEvent) {
     if (this.phase !== 'TURN_AIM' && !this.phase.startsWith('DEPLOY')) return;
+    if (this.mode === 'ONLINE_P2P' && this.activePlayer !== this.myOnlineRole) return;
+    if (this.mode === 'VS_AI' && this.activePlayer === 'red') return;
 
     const hit = this.sceneManager.raycastPaper(e.clientX, e.clientY);
     if (hit) {
@@ -623,19 +671,25 @@ export class GameController {
     this.totalStrikes++;
     this.turnCount++;
 
+    // Tactile pen tap on the paper
     this.sceneManager.isPenWriting = true;
     soundManager.play('dot', 0.05, 0.95);
     soundManager.play('scratch', 0.1, 0.6);
 
     setTimeout(() => {
+      // Pen lifts up and retreats to desk dock BEFORE paper folds!
       this.sceneManager.isPenWriting = false;
+      this.sceneManager.isPenActiveOnPaper = false;
+
+      // Crisp paper fold whoosh
       soundManager.play('fold', 0.1, 0.9);
 
       this.sceneManager.paperFold.triggerFold(
         this.activePlayer,
         () => {
-          // Contact: Mirror ink coordinate
+          // Flush Contact Press & Rub on the table!
           soundManager.play('slap', 0.08, 1.0);
+          soundManager.play('rub', 0.1, 0.85);
 
           const mirroredX = 1000 - strikeX;
           const mirroredY = strikeY;
@@ -656,10 +710,6 @@ export class GameController {
           if (isHit && hitSoldier) {
             hitSoldier.alive = false;
             this.totalHits++;
-            soundManager.play('kill', 0.05, 1.0);
-            this.showToast(`DIRECT HIT! ${hitSoldier.type.toUpperCase()} KILLED!`, 'hit');
-          } else {
-            this.showToast('MISS! Smudge transferred.', 'miss');
           }
 
           this.strikes.push({
@@ -675,13 +725,24 @@ export class GameController {
           });
         },
         () => {
-          // Unfold complete
+          // Unfold complete: Paper is now completely open and flat!
           soundManager.play('unfold', 0.1, 0.75);
+
+          // Reveal hit/miss with authentic comedic sound
+          const lastStrike = this.strikes[this.strikes.length - 1];
+          if (lastStrike?.hit) {
+            soundManager.play('kill', 0.05, 1.0);
+            this.showToast('DIRECT HIT! ENEMY ELIMINATED!', 'hit');
+          } else {
+            soundManager.play('smudge', 0.08, 0.9);
+            this.showToast('MISS! Smudge transferred.', 'miss');
+          }
+
           this.paperCanvas.render(this.soldiers, this.strikes, this.phase, this.activePlayer, null);
           this.checkGameStatus();
         }
       );
-    }, 240);
+    }, 180);
   }
 
   private checkGameStatus() {
@@ -705,8 +766,8 @@ export class GameController {
     soundManager.play('bell', 0.02, 1.0);
 
     confetti({
-      particleCount: 130,
-      spread: 90,
+      particleCount: 140,
+      spread: 95,
       origin: { y: 0.6 },
       colors: winner === 'blue' ? ['#0a329e', '#4a90e2', '#ffffff'] : ['#ba1222', '#e74c3c', '#ffffff'],
     });
@@ -748,7 +809,18 @@ export class GameController {
       targetY = Math.floor(80 + Math.random() * 540);
     }
 
-    this.executeStrike(targetX, targetY);
+    // Convert AI target canvas pixels to 3D world coordinates for the pen
+    const uv = this.paperCanvas.canvasToUVCoords(targetX, targetY);
+    const worldX = (uv.u - 0.5) * this.sceneManager.paperFold.WIDTH;
+    const worldY = (uv.v - 0.5) * this.sceneManager.paperFold.HEIGHT;
+    this.sceneManager.paperContactPoint.set(worldX, worldY, 0.002);
+    this.sceneManager.setActivePen('red');
+    this.sceneManager.isPenActiveOnPaper = true;
+
+    // AI pauses naturally to aim, then marks the dot
+    setTimeout(() => {
+      this.executeStrike(targetX, targetY);
+    }, 700);
   }
 
   private resetToMenu() {
@@ -762,6 +834,7 @@ export class GameController {
     this.totalStrikes = 0;
     this.myDeploymentReady = false;
     this.opponentDeployed = false;
+    this.sceneManager.isPenActiveOnPaper = false; // Pens docked
     this.paperCanvas.render(this.soldiers, this.strikes, this.phase, 'blue', null);
   }
 

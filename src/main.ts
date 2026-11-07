@@ -10,8 +10,12 @@ window.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize Dynamic 2D Paper Canvas
   const paperCanvas = new PaperCanvas();
 
-  // 2. Initialize 3D Three.js Scene
-  const sceneManager = new SceneManager(container, paperCanvas.texture);
+  // 2. Initialize 3D Three.js Scene (Front Texture + Clean Blank Back Texture)
+  const sceneManager = new SceneManager(
+    container,
+    paperCanvas.texture,
+    paperCanvas.backTexture
+  );
 
   // 3. Initialize Core Game Controller
   const gameController = new GameController(sceneManager, paperCanvas);

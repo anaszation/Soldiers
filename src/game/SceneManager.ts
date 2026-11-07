@@ -12,21 +12,35 @@ export class SceneManager {
   private loader: GLTFLoader = new GLTFLoader();
   private bluePenMesh: THREE.Group | null = null;
   private redPenMesh: THREE.Group | null = null;
-  private activePenMesh: THREE.Group | null = null;
+  public activePenMesh: THREE.Group | null = null;
+  public activePenColor: PlayerColor = 'blue';
   private deskSceneMesh: THREE.Group | null = null;
+
+  // Pen Dock Positions on the Wooden Desk
+  private blueDockPos = new THREE.Vector3(-0.25, -0.07, 0.003);
+  private blueDockRot = new THREE.Vector3(0, 0, Math.PI / 7);
+  private redDockPos = new THREE.Vector3(0.25, -0.07, 0.003);
+  private redDockRot = new THREE.Vector3(0, 0, -Math.PI / 7);
+
+  // Pen State: when false, pen rests in desk dock!
+  public isPenActiveOnPaper: boolean = false;
+  public isPenWriting: boolean = false;
 
   // Raycasting & Pen Dynamics
   public raycaster: THREE.Raycaster = new THREE.Raycaster();
   public mousePos: THREE.Vector2 = new THREE.Vector2(-999, -999);
-  private paperContactPoint: THREE.Vector3 = new THREE.Vector3(0, 0, 0.002);
-  public isPenWriting: boolean = false;
+  public paperContactPoint: THREE.Vector3 = new THREE.Vector3(-0.06, 0.0, 0.002);
 
   // Camera views
   private currentCameraTarget: THREE.Vector3 = new THREE.Vector3(0, 0.018, 0);
   private targetCameraPos: THREE.Vector3 = new THREE.Vector3(0, -0.015, 0.48); // Tactical Top-down
   public isTacticalView: boolean = true;
 
-  constructor(container: HTMLElement, paperTexture: THREE.CanvasTexture) {
+  constructor(
+    container: HTMLElement,
+    frontTexture: THREE.CanvasTexture,
+    backTexture: THREE.CanvasTexture
+  ) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#191009'); // Warm dark study ambiance
 
@@ -49,11 +63,11 @@ export class SceneManager {
     // Setup Lighting
     this.setupLighting();
 
-    // Setup 3D Paper Plane
-    this.paperFold = new PaperFoldEngine(paperTexture);
-    this.scene.add(this.paperFold.mesh);
+    // Setup 3D Paper Plane (With two-sided front & back textures)
+    this.paperFold = new PaperFoldEngine(frontTexture, backTexture);
+    this.scene.add(this.paperFold.rootGroup);
 
-    // Setup High-Fidelity Ballpoint Pens
+    // Setup High-Fidelity Bic Ballpoint Pens
     this.setupBallpointPens();
 
     // Load Blender 3D Desk Environment
@@ -157,9 +171,14 @@ export class SceneManager {
     plugMesh.castShadow = true;
     penGroup.add(plugMesh);
 
-    // Natural 48-degree handwriting lean toward player and slight right tilt
-    penGroup.rotation.x = Math.PI / 3.7;
-    penGroup.rotation.z = -Math.PI / 14;
+    // Initial parked dock position
+    if (color === 'blue') {
+      penGroup.position.copy(this.blueDockPos);
+      penGroup.rotation.set(0, 0, this.blueDockRot.z);
+    } else {
+      penGroup.position.copy(this.redDockPos);
+      penGroup.rotation.set(0, 0, this.redDockRot.z);
+    }
 
     return penGroup;
   }
@@ -169,10 +188,10 @@ export class SceneManager {
     this.scene.add(this.bluePenMesh);
 
     this.redPenMesh = this.createBicPen('red');
-    this.redPenMesh.visible = false;
     this.scene.add(this.redPenMesh);
 
     this.activePenMesh = this.bluePenMesh;
+    this.activePenColor = 'blue';
   }
 
   private loadDeskModel() {
@@ -192,13 +211,10 @@ export class SceneManager {
   }
 
   public setActivePen(color: PlayerColor) {
+    this.activePenColor = color;
     if (color === 'blue') {
-      if (this.bluePenMesh) this.bluePenMesh.visible = true;
-      if (this.redPenMesh) this.redPenMesh.visible = false;
       this.activePenMesh = this.bluePenMesh;
     } else {
-      if (this.bluePenMesh) this.bluePenMesh.visible = false;
-      if (this.redPenMesh) this.redPenMesh.visible = true;
       this.activePenMesh = this.redPenMesh;
     }
   }
@@ -252,35 +268,45 @@ export class SceneManager {
     this.camera.position.lerp(this.targetCameraPos, deltaTime * 5.0);
     this.camera.lookAt(this.currentCameraTarget);
 
-    // 3. Update 3D Pen Movement & Natural Handwriting Tilt
-    if (this.activePenMesh) {
-      const targetPos = this.paperContactPoint.clone();
+    // 3. Update Blue Pen (Active on paper OR docked on left desk)
+    if (this.bluePenMesh) {
+      if (this.activePenColor === 'blue' && this.isPenActiveOnPaper) {
+        // Aiming / writing on paper
+        const targetPos = this.paperContactPoint.clone();
+        targetPos.z = this.isPenWriting ? 0.0018 : 0.0065;
+        this.bluePenMesh.position.lerp(targetPos, deltaTime * 16.0);
 
-      if (this.isPenWriting) {
-        // Pen tip touches paper directly
-        targetPos.z = 0.002;
+        const targetRotX = this.isPenWriting ? Math.PI / 3.4 : Math.PI / 3.7;
+        this.bluePenMesh.rotation.x = THREE.MathUtils.lerp(this.bluePenMesh.rotation.x, targetRotX, deltaTime * 12);
+        this.bluePenMesh.rotation.z = THREE.MathUtils.lerp(this.bluePenMesh.rotation.z, -Math.PI / 14, deltaTime * 12);
       } else {
-        // Pen hovers naturally just 6mm above the paper (minimal parallax)
-        targetPos.z = 0.007;
+        // Smoothly return to left desk dock
+        this.bluePenMesh.position.lerp(this.blueDockPos, deltaTime * 8.0);
+        this.bluePenMesh.rotation.x = THREE.MathUtils.lerp(this.bluePenMesh.rotation.x, 0, deltaTime * 8);
+        this.bluePenMesh.rotation.z = THREE.MathUtils.lerp(this.bluePenMesh.rotation.z, this.blueDockRot.z, deltaTime * 8);
       }
-
-      this.activePenMesh.position.lerp(targetPos, deltaTime * 16.0);
-
-      // Natural handwriting tilt: leans back toward user and slightly right
-      const targetRotX = this.isPenWriting ? Math.PI / 3.4 : Math.PI / 3.7;
-      this.activePenMesh.rotation.x = THREE.MathUtils.lerp(
-        this.activePenMesh.rotation.x,
-        targetRotX,
-        deltaTime * 10
-      );
-      this.activePenMesh.rotation.z = THREE.MathUtils.lerp(
-        this.activePenMesh.rotation.z,
-        -Math.PI / 14,
-        deltaTime * 10
-      );
     }
 
-    // 4. Render Frame
+    // 4. Update Red Pen (Active on paper OR docked on right desk)
+    if (this.redPenMesh) {
+      if (this.activePenColor === 'red' && this.isPenActiveOnPaper) {
+        // Aiming / writing on paper
+        const targetPos = this.paperContactPoint.clone();
+        targetPos.z = this.isPenWriting ? 0.0018 : 0.0065;
+        this.redPenMesh.position.lerp(targetPos, deltaTime * 16.0);
+
+        const targetRotX = this.isPenWriting ? Math.PI / 3.4 : Math.PI / 3.7;
+        this.redPenMesh.rotation.x = THREE.MathUtils.lerp(this.redPenMesh.rotation.x, targetRotX, deltaTime * 12);
+        this.redPenMesh.rotation.z = THREE.MathUtils.lerp(this.redPenMesh.rotation.z, -Math.PI / 14, deltaTime * 12);
+      } else {
+        // Smoothly return to right desk dock
+        this.redPenMesh.position.lerp(this.redDockPos, deltaTime * 8.0);
+        this.redPenMesh.rotation.x = THREE.MathUtils.lerp(this.redPenMesh.rotation.x, 0, deltaTime * 8);
+        this.redPenMesh.rotation.z = THREE.MathUtils.lerp(this.redPenMesh.rotation.z, this.redDockRot.z, deltaTime * 8);
+      }
+    }
+
+    // 5. Render Frame
     this.renderer.render(this.scene, this.camera);
   }
 }

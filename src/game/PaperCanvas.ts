@@ -6,6 +6,11 @@ export class PaperCanvas {
   public ctx: CanvasRenderingContext2D;
   public texture: THREE.CanvasTexture;
 
+  // Clean back-of-the-page canvas & texture (Zero doodles, no bleed-through!)
+  public backCanvas: HTMLCanvasElement;
+  public backCtx: CanvasRenderingContext2D;
+  public backTexture: THREE.CanvasTexture;
+
   public readonly WIDTH = 1000;
   public readonly HEIGHT = 700;
   public readonly CREASE_X = 500;
@@ -17,6 +22,7 @@ export class PaperCanvas {
   private imagesLoaded: boolean = false;
 
   constructor() {
+    // 1. Front Canvas (Active Player Field & Doodles)
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.WIDTH;
     this.canvas.height = this.HEIGHT;
@@ -28,8 +34,70 @@ export class PaperCanvas {
     this.texture.magFilter = THREE.LinearFilter;
     this.texture.colorSpace = THREE.SRGBColorSpace;
 
+    // 2. Clean Back Canvas (Authentic blank back of notebook sheet)
+    this.backCanvas = document.createElement('canvas');
+    this.backCanvas.width = this.WIDTH;
+    this.backCanvas.height = this.HEIGHT;
+    this.backCtx = this.backCanvas.getContext('2d')!;
+
+    this.backTexture = new THREE.CanvasTexture(this.backCanvas);
+    this.backTexture.generateMipmaps = true;
+    this.backTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    this.backTexture.magFilter = THREE.LinearFilter;
+    this.backTexture.colorSpace = THREE.SRGBColorSpace;
+
+    this.renderBackdrop();
     this.preloadImages();
     this.render([], [], 'DEPLOY_BLUE', 'blue', null);
+  }
+
+  private renderBackdrop() {
+    const ctx = this.backCtx;
+    const w = this.WIDTH;
+    const h = this.HEIGHT;
+    const creaseX = this.CREASE_X;
+
+    // Warm cream paper base
+    ctx.fillStyle = '#f7f4ed';
+    ctx.fillRect(0, 0, w, h);
+
+    // Quad grid lines
+    ctx.strokeStyle = '#c2d5e8';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    for (let x = 20; x < w; x += 20) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+    }
+    for (let y = 20; y < h; y += 20) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+    }
+    ctx.stroke();
+
+    // Red margin guides
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(50, 0);
+    ctx.lineTo(50, h);
+    ctx.moveTo(w - 50, 0);
+    ctx.lineTo(w - 50, h);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    // Center crease fold line
+    ctx.strokeStyle = '#962d22';
+    ctx.lineWidth = 2.0;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(creaseX, 0);
+    ctx.lineTo(creaseX, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    this.backTexture.needsUpdate = true;
   }
 
   private preloadImages() {
